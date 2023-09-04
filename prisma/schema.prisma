@@ -1,0 +1,582 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model activity_log {
+  activity_log_uuid   String   @id(map: "PK_22f0b4eb8ee532ce5b991c7c818") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  event_type          String
+  resource_identifier String
+  event_log           Json?
+  client_uuid         String   @db.Uuid
+  user_uuid           String   @db.Uuid
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  user                user     @relation(fields: [user_uuid], references: [user_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_5ee7cbb772ad17c6eb3a0c8a362")
+  client              client   @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_6eb819f4e7b0393094af349a52e")
+}
+
+model clause {
+  clause_uuid       String      @id(map: "PK_bf4998368b722b7b208d8f2539b") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clause_ref_pg_sec String?     @db.VarChar(50)
+  clause_abstract   String?
+  notice_date       DateTime?   @db.Date
+  effective_date    DateTime?   @db.Date
+  clause_status     String
+  clause_type_uuid  String      @db.Uuid
+  client_uuid       String      @db.Uuid
+  lease_uuid        String      @db.Uuid
+  created_at        DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime    @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?   @db.Timestamptz(6)
+  clause_type       clause_type @relation(fields: [clause_type_uuid], references: [clause_type_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_34fc5f9384cc051d8ae7aa753a2")
+  client            client      @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_d7d0bd0b6e20e886cb78ca61e64")
+  lease             lease       @relation(fields: [lease_uuid], references: [lease_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_f9bc2c945deff923b9244d4642b")
+}
+
+model clause_type {
+  clause_type_uuid     String   @id(map: "PK_d23eb5f8553d69a9cea8d2e1c60") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clause_type_name     String   @unique(map: "UQ_c86870e321d9072816e60920abf") @db.VarChar(100)
+  clause_type_category String   @db.VarChar(50)
+  is_actionable        Boolean  @default(false)
+  clause               clause[]
+}
+
+model client {
+  client_uuid              String                @id(map: "PK_1877f4f250c9271781a8eb70f95") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  client_name              String                @unique(map: "IDX_480f88a019346eae487a0cd7f0") @db.VarChar(100)
+  client_id                String                @db.VarChar(50)
+  currency_code_default    String?               @db.VarChar(3)
+  client_logo              String?               @db.VarChar(250)
+  unit_meas_default        String?
+  client_status            String                @default("active")
+  fiscal_year_month_offset Int                   @default(0)
+  created_at               DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime              @default(now()) @db.Timestamptz(6)
+  deleted_at               DateTime?             @db.Timestamptz(6)
+  activity_log             activity_log[]
+  clause                   clause[]
+  client_currency          client_currency[]
+  contact                  contact[]
+  contact_type             contact_type[]
+  cost_sched_category      cost_sched_category[]
+  lease                    lease[]
+  lease_business           lease_business[]
+  lease_category           lease_category[]
+  market_metro             market_metro[]
+  note                     note[]
+  plan_of_action           plan_of_action[]
+  property                 property[]
+  property_type            property_type[]
+  region                   region[]
+  report                   report[]
+  user_client              user_client[]
+
+  @@index([client_uuid, deleted_at])
+}
+
+model client_currency {
+  client_currency_uuid String    @id(map: "PK_aabe56f42a76ce8aefed3873eb7") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  exchange_rate        Decimal   @default(1) @db.Decimal(29, 9)
+  exchange_report_date DateTime  @db.Date
+  is_base              Boolean   @default(false)
+  client_uuid          String    @db.Uuid
+  currency_code        String    @db.VarChar(3)
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at           DateTime? @db.Timestamptz(6)
+  client               client    @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_323ce23bd034b9dacae4a187e1b")
+  currency             currency  @relation(fields: [currency_code], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_c2b3db79cbfa65ee872ecc02811")
+}
+
+model contact {
+  contact_uuid              String          @id(map: "PK_126b452db77c24d32b5885f4468") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  first_name                String          @db.VarChar(100)
+  last_name                 String          @db.VarChar(100)
+  organization_name         String          @db.VarChar(100)
+  attn_name                 String?         @db.VarChar(100)
+  state_province            String?         @db.VarChar(50)
+  postal_code               String?         @db.VarChar(50)
+  phone_direct              String?         @db.VarChar(50)
+  phone_mobile              String?         @db.VarChar(50)
+  fax_number                String?         @db.VarChar(50)
+  vendor_id                 String?         @db.VarChar(50)
+  tax_id                    String?         @db.VarChar(50)
+  address1                  String?
+  address2                  String?
+  city                      String?         @db.VarChar(100)
+  contact_email             String?         @db.VarChar(100)
+  contact_note              String?
+  client_uuid               String          @db.Uuid
+  country_uuid              String          @db.Uuid
+  primary_contact_type_uuid String          @db.Uuid
+  created_at                DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime        @default(now()) @db.Timestamptz(6)
+  deleted_at                DateTime?       @db.Timestamptz(6)
+  client                    client          @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_69d11327099ea3214d4702669c1")
+  country                   country         @relation(fields: [country_uuid], references: [country_uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec415a6bace944d3aa751441ed2")
+  contact_type              contact_type    @relation(fields: [primary_contact_type_uuid], references: [contact_type_uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_f2dcb2c46fb883c132b39dab614")
+  lease_contact             lease_contact[]
+}
+
+model contact_type {
+  contact_type_uuid String          @id(map: "PK_29056af2fe5a22795fa58cf300f") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contact_type_name String          @db.VarChar(50)
+  client_uuid       String          @db.Uuid
+  created_at        DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime        @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?       @db.Timestamptz(6)
+  contact           contact[]
+  client            client          @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_79445fa96dc35cc97edfdeca8e3")
+  lease_contact     lease_contact[]
+
+  @@unique([contact_type_name, client_uuid, deleted_at])
+}
+
+model cost_data {
+  cost_data_uuid  String     @id(map: "PK_44819bc1b79e1552c42fe97661e") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  period_date     DateTime   @db.Date
+  period_amt      Decimal    @default(0) @db.Decimal(14, 4)
+  cost_sched_uuid String     @db.Uuid
+  cost_sched      cost_sched @relation(fields: [cost_sched_uuid], references: [cost_sched_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_6a031df8433cdd0cd417afb56eb")
+
+  @@index([cost_sched_uuid])
+  @@index([period_date])
+}
+
+model cost_sched {
+  cost_sched_uuid          String              @id(map: "PK_21d79706d0b37cbe5db6449e605") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  cost_sched_amt           Decimal             @default(0) @db.Decimal(14, 4)
+  escalation_rate          Decimal             @default(0) @db.Decimal(5, 4)
+  start_date               DateTime            @db.Date
+  end_date                 DateTime            @db.Date
+  cost_sched_note          String?
+  frequency                String
+  amt_unit_type            String
+  cost_sched_status        String
+  cost_sched_tax_rate      Decimal             @default(0) @db.Decimal(5, 4)
+  cost_sched_category_uuid String              @db.Uuid
+  currency_code            String              @db.VarChar(3)
+  lease_uuid               String              @db.Uuid
+  created_at               DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at               DateTime?           @db.Timestamptz(6)
+  cost_data                cost_data[]
+  cost_sched_category      cost_sched_category @relation(fields: [cost_sched_category_uuid], references: [cost_sched_category_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_110361aa958ff7dc423b257c1d3")
+  currency                 currency            @relation(fields: [currency_code], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_5e4f5b61954d7f1abe7c1c89aff")
+  lease                    lease               @relation(fields: [lease_uuid], references: [lease_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_c37f66ad127ce99ebbe5b52c18c")
+
+  @@index([cost_sched_category_uuid])
+  @@index([lease_uuid, deleted_at])
+}
+
+model cost_sched_category {
+  cost_sched_category_uuid    String       @id(map: "PK_e096e3d20f14589202a48d409a9") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  category_code               String       @db.VarChar(50)
+  category_name               String       @db.VarChar(100)
+  sub_category_code           String       @db.VarChar(50)
+  sub_category_name           String       @db.VarChar(100)
+  account_code                String       @db.VarChar(50)
+  sort_order                  Int          @default(0)
+  amt_pos_neg                 Int          @default(1)
+  is_market_comp              Boolean      @default(false)
+  is_one_time                 Boolean      @default(false)
+  is_cost_to_achieve          Boolean      @default(false)
+  default_cost_sched_tax_rate Decimal      @default(0) @db.Decimal(5, 4)
+  default_frequency           String?
+  default_amt_unit_type       String?
+  default_status              String?
+  reporting_type              String
+  client_uuid                 String       @db.Uuid
+  created_at                  DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime     @default(now()) @db.Timestamptz(6)
+  deleted_at                  DateTime?    @db.Timestamptz(6)
+  cost_sched                  cost_sched[]
+  client                      client       @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_15a30c43ac7f4234b72678da644")
+
+  @@unique([client_uuid, category_name, sort_order], map: "idx_costschedcategory_unique_sortorder")
+  @@unique([sub_category_code, client_uuid], map: "idx_costschedcategory_unique_subcategorycode")
+  @@unique([sub_category_name, client_uuid], map: "idx_costschedcategory_unique_subcategoryname")
+  @@index([client_uuid, deleted_at])
+}
+
+model country {
+  country_uuid          String     @id(map: "PK_4e06beff3ecfb1a974312fe536d") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  country_name          String     @unique(map: "UQ_2c5aa339240c0c3ae97fcc9dc4c") @db.VarChar(100)
+  country_official_name String     @unique(map: "UQ_d8b04c2404319fb01b947daf48c") @db.VarChar(200)
+  country2_code         String     @unique(map: "UQ_fea5ff474d3ef3f7da0d6fa4b6d") @db.VarChar(2)
+  country3_code         String     @unique(map: "UQ_924932781c389ec402071f90514") @db.VarChar(3)
+  country_numeric_code  Int        @unique(map: "UQ_67ee43958039945f32daf8f0816")
+  currency_code         String     @default("USD") @db.VarChar(3)
+  latitude              Decimal?   @default(0) @db.Decimal(9, 6)
+  longitude             Decimal?   @default(0) @db.Decimal(9, 6)
+  country_region        String     @default("Not Specified")
+  contact               contact[]
+  property              property[]
+}
+
+model currency {
+  currency_code   String            @id(map: "PK_409f9b5ad6c3766c4e1fda1c026") @db.VarChar(3)
+  currency_name   String            @db.VarChar(50)
+  currency_symbol String            @default("") @db.VarChar(10)
+  client_currency client_currency[]
+  cost_sched      cost_sched[]
+  user_client     user_client[]
+}
+
+model date_dim {
+  date_dim_id      Int      @id @default(autoincrement())
+  date_value       DateTime @db.Date
+  date_year        Int
+  day_of_year      Int
+  qtr_num          Int
+  qtr_name         String   @db.VarChar(10)
+  month_num        Int
+  month_name       String   @db.VarChar(20)
+  day_of_month_num Int
+  week_num         Int
+  day_of_week_num  Int
+  day_of_week_name String   @db.VarChar(10)
+  is_weekend       Boolean  @default(false)
+  year_and_week    String   @db.VarChar(20)
+  year_and_month   String   @db.VarChar(20)
+  year_and_qtr     String   @db.VarChar(20)
+}
+
+model lease {
+  lease_uuid                    String           @id(map: "PK_49ed1e942e87c17872181c2af81") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilization_rate_peak         Decimal          @default(0) @db.Decimal(5, 4)
+  utilization_rate_avg          Decimal          @default(0) @db.Decimal(5, 4)
+  presence_count_avg            Int              @default(0)
+  presence_count_peak           Int              @default(0)
+  usable_area                   Decimal          @default(0) @db.Decimal(14, 4)
+  sec_dep_return_amt            Decimal          @default(0) @db.Decimal(14, 4)
+  sec_dep_credit_is_irrevocable Boolean          @default(false)
+  sec_dep_credit_amt            Decimal          @default(0) @db.Decimal(14, 4)
+  sec_dep_apply_tax             Boolean          @default(false)
+  sec_dep_guarantor_amt         Decimal          @default(0) @db.Decimal(14, 4)
+  is_month_to_month             Boolean          @default(false)
+  is_operating_lease            Boolean          @default(true)
+  parent_lease_uuid             String?          @db.Uuid
+  plan_of_action_note           String?
+  floor_suite_space             String?          @db.VarChar(100)
+  sec_dep_bank_name             String?          @db.VarChar(100)
+  sec_dep_guarantor_name        String?          @db.VarChar(100)
+  sec_dep_guarantor_end_date    DateTime?        @db.Date
+  lease_id                      String           @db.VarChar(50)
+  lease_name                    String           @db.VarChar(100)
+  currency_code                 String           @default("USD") @db.VarChar(3)
+  workspace_capacity            Int              @default(0)
+  headcount_assigned            Int              @default(0)
+  member_count                  Int              @default(0)
+  parking_spaces                Int              @default(0)
+  base_prorata_pct              Decimal          @default(0) @db.Decimal(5, 4)
+  sec_dep_pay_amt               Decimal          @default(0) @db.Decimal(14, 4)
+  is_vacant                     Boolean?         @default(false)
+  name_on_lease                 String?          @db.VarChar(100)
+  lease_note                    String?
+  rent_area                     Decimal?         @default(0) @db.Decimal(14, 4)
+  commence_date                 DateTime?        @db.Date
+  expire_date                   DateTime?        @db.Date
+  expire_review_date            DateTime?        @db.Date
+  possession_date               DateTime?        @db.Date
+  original_commence_date        DateTime?        @db.Date
+  execution_date                DateTime?        @db.Date
+  base_year                     Int?
+  rent_type                     String?
+  cert_insurance_expire_date    DateTime?        @db.Date
+  sec_dep_pay_date              DateTime?        @db.Date
+  sec_dep_return_date           DateTime?        @db.Date
+  sec_dep_note                  String?
+  lease_status                  String           @default("inactive")
+  lease_abstract_status         String           @default("draft")
+  unit_meas                     String?
+  sec_dep_gross_net             String           @default("Gross Rent")
+  lt_act_54                     String           @default("Not Applicable")
+  client_uuid                   String           @db.Uuid
+  lease_type_uuid               String           @db.Uuid
+  property_uuid                 String           @db.Uuid
+  lease_business_uuid           String?          @db.Uuid
+  lease_area_type_uuid          String?          @db.Uuid
+  plan_of_action_uuid           String?          @db.Uuid
+  lease_category_uuid           String?          @db.Uuid
+  created_at                    DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at                    DateTime         @default(now()) @db.Timestamptz(6)
+  deleted_at                    DateTime?        @db.Timestamptz(6)
+  sec_dep_credit_end_date       DateTime?        @db.Date
+  sec_dep_review_date           DateTime?        @db.Date
+  clause                        clause[]
+  cost_sched                    cost_sched[]
+  lease_area_type               lease_area_type? @relation(fields: [lease_area_type_uuid], references: [lease_area_type_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_3efbe0ba99067a1453ee1711151")
+  property                      property         @relation(fields: [property_uuid], references: [property_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_5a6a16c2180b91c21190a5211a8")
+  lease_business                lease_business?  @relation(fields: [lease_business_uuid], references: [lease_business_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_672b3068c160efd45384e3f28d8")
+  lease_type                    lease_type       @relation(fields: [lease_type_uuid], references: [lease_type_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_6e02ec0f3eaeb89b15bed54105a")
+  client                        client           @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_a01c58300721fe7529601e1c73c")
+  lease_category                lease_category?  @relation(fields: [lease_category_uuid], references: [lease_category_uuid], onDelete: Cascade, onUpdate: NoAction)
+  plan_of_action                plan_of_action?  @relation(fields: [plan_of_action_uuid], references: [plan_of_action_uuid], onDelete: Cascade, onUpdate: NoAction)
+  lease_contact                 lease_contact[]
+  responsibility                responsibility[]
+
+  @@index([lease_name, lease_id])
+  @@index([lease_uuid, lease_status, deleted_at, client_uuid])
+}
+
+model lease_area_type {
+  lease_area_type_uuid String  @id(map: "PK_10abe758b271cd8a808ec627b33") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  lease_area_type_name String  @unique(map: "UQ_484463a95a67185165660787103") @db.VarChar(50)
+  lease                lease[]
+}
+
+model lease_business {
+  lease_business_uuid String    @id(map: "PK_0f33831225468ecc9ec30c7705f") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  lease_business_name String    @db.VarChar(50)
+  client_uuid         String    @db.Uuid
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at          DateTime? @db.Timestamptz(6)
+  lease               lease[]
+  client              client    @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_2ba4b71e87d758449256215b51d")
+}
+
+model lease_category {
+  lease_category_uuid String    @id(map: "PK_409f9b5ad6c3766c4e1fda1c023") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  lease_category_name String    @db.VarChar(50)
+  client_uuid         String    @db.Uuid
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at          DateTime? @db.Timestamptz(6)
+  lease               lease[]
+  client              client    @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model lease_comp {
+  lease_comp_uuid      String    @id(map: "PK_409f9b5ad6c3766c1e1fda1c023") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  address              String
+  tenant_name          String    @db.VarChar(100)
+  rent_area            Decimal   @default(0) @db.Decimal(14, 4)
+  sign_date            DateTime  @db.Date
+  lease_comp_amt_net   Decimal   @default(0) @db.Decimal(14, 4)
+  lease_comp_amt_gross Decimal   @default(0) @db.Decimal(14, 4)
+  comp_source          String    @db.VarChar(50)
+  comp_date            DateTime  @db.Date
+  ay_property_id       Int?
+  property_class       String    @default("unknown")
+  rent_type            String    @default("Not Specified")
+  latitude             Decimal?  @default(0) @db.Decimal(9, 6)
+  longitude            Decimal?  @default(0) @db.Decimal(9, 6)
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at           DateTime? @db.Timestamptz(6)
+  lease_uuid           String    @db.Uuid
+}
+
+model lease_contact {
+  lease_contact_uuid String       @id(map: "PK_3e5f8e34bc9be2ba2e1f76f8c60") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contact_type_uuid  String       @db.Uuid
+  contact_uuid       String       @db.Uuid
+  lease_uuid         String       @db.Uuid
+  created_at         DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime     @default(now()) @db.Timestamptz(6)
+  deleted_at         DateTime?    @db.Timestamptz(6)
+  contact_type       contact_type @relation(fields: [contact_type_uuid], references: [contact_type_uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_3c90f027b037f98b60d8b750971")
+  lease              lease        @relation(fields: [lease_uuid], references: [lease_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_86e62a8709235e6ee4172337f71")
+  contact            contact      @relation(fields: [contact_uuid], references: [contact_uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_964d54675cd9864b789ece386f3")
+}
+
+model lease_type {
+  lease_type_uuid    String  @id(map: "PK_ab073cbf46ab7248f4ef4c71fa7") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  lease_type_name    String  @unique(map: "UQ_88a5a5cfe0062004081244867c0") @db.VarChar(50)
+  lease_type_pos_neg Int     @default(1)
+  lease              lease[]
+}
+
+model market_metro {
+  market_metro_uuid String     @id(map: "PK_1a16f62780d151d2ad9b65164d9") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  market_metro_name String     @db.VarChar(100)
+  client_uuid       String     @db.Uuid
+  created_at        DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime   @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?  @db.Timestamptz(6)
+  client            client     @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_95a2b5747a5f12c3893298c02b5")
+  property          property[]
+}
+
+model migrations {
+  id        Int    @id(map: "PK_8c82d7f526340ab734260ea46be") @default(autoincrement())
+  timestamp BigInt
+  name      String @db.VarChar
+}
+
+model note {
+  note_uuid           String    @id(map: "PK_409f9b5ad6c3766c4e1fda1c024") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  note_object_type    String?
+  resource_identifier String
+  note_text           String
+  client_uuid         String    @db.Uuid
+  user_uuid           String    @db.Uuid
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at          DateTime? @db.Timestamptz(6)
+  user                user      @relation(fields: [user_uuid], references: [user_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_5ee7cbb772ad17c6eb3a0c8a362")
+  client              client    @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_adc8e1c51d203320bc21bf5ff20")
+}
+
+model plan_of_action {
+  plan_of_action_uuid     String    @id(map: "PK_409f9b5ad6c3766c4e1fda1c022") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  plan_of_action_name     String    @db.VarChar(50)
+  plan_of_action_category String    @default("Not Specified")
+  client_uuid             String    @db.Uuid
+  created_at              DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at              DateTime? @db.Timestamptz(6)
+  lease                   lease[]
+  client                  client    @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model property {
+  property_uuid       String         @id(map: "PK_ac52d2729d3e3a963731089e72e") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  property_id         String         @db.VarChar(50)
+  property_name       String         @db.VarChar(100)
+  city                String?        @db.VarChar(100)
+  latitude            Decimal?       @default(0) @db.Decimal(9, 6)
+  longitude           Decimal?       @default(0) @db.Decimal(9, 6)
+  county              String?        @db.VarChar(100)
+  street_address1     String?
+  street_address2     String?
+  state_province      String?        @db.VarChar(100)
+  msa_name            String?        @db.VarChar(100)
+  property_note       String?
+  postal_code         String?        @db.VarChar(50)
+  alt_property_id     String?        @db.VarChar(50)
+  ay_property_id      Int?
+  ay_market_name      String?        @db.VarChar(50)
+  ay_submarket_name   String?        @db.VarChar(50)
+  ay_micromarket_name String?        @db.VarChar(50)
+  property_status     String         @default("active")
+  property_class      String         @default("unknown")
+  ownership_type      String?
+  client_uuid         String         @db.Uuid
+  country_uuid        String?        @db.Uuid
+  market_metro_uuid   String?        @db.Uuid
+  property_type_uuid  String?        @db.Uuid
+  region_uuid         String?        @db.Uuid
+  created_at          DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime       @default(now()) @db.Timestamptz(6)
+  deleted_at          DateTime?      @db.Timestamptz(6)
+  lease               lease[]
+  property_type       property_type? @relation(fields: [property_type_uuid], references: [property_type_uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_573cabbacf94d70feabf6ab16ce")
+  country             country?       @relation(fields: [country_uuid], references: [country_uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_7ece0c8a01266e6edc7de4f1d50")
+  client              client         @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_adc8e1c51d203320bc21bf5ff20")
+  market_metro        market_metro?  @relation(fields: [market_metro_uuid], references: [market_metro_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_c67ae8e470a7e56c39e701bcc41")
+  region              region?        @relation(fields: [region_uuid], references: [region_uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_d929dfa5a115812bf8073393a2c")
+
+  @@index([client_uuid, deleted_at])
+  @@index([country_uuid])
+}
+
+model property_type {
+  property_type_uuid    String     @id(map: "PK_d3a891f19e005bfe7affdb59eae") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  property_type_name    String     @default("") @db.VarChar(50)
+  property_subtype_name String     @default("") @db.VarChar(50)
+  market_type           String     @default("office")
+  client_uuid           String     @db.Uuid
+  created_at            DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime   @default(now()) @db.Timestamptz(6)
+  deleted_at            DateTime?  @db.Timestamptz(6)
+  property              property[]
+  client                client     @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_8cce74c6addaf94b7800dff2661")
+}
+
+model region {
+  region_uuid    String     @id(map: "PK_88ad466257b41464987ba07e96e") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  region_name    String     @db.VarChar(50)
+  subregion_name String     @default("") @db.VarChar(50)
+  client_uuid    String     @db.Uuid
+  created_at     DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime   @default(now()) @db.Timestamptz(6)
+  deleted_at     DateTime?  @db.Timestamptz(6)
+  property       property[]
+  client         client     @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_35535d8ccbe3ef803ded2856f9e")
+
+  @@unique([client_uuid, subregion_name], map: "idx_region_unique_subregion")
+}
+
+model report {
+  report_uuid      String    @id(map: "PK_a4d712z02w125vga3ogham41aie") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  report_name      String    @db.VarChar(50)
+  report_category  String    @db.VarChar(50)
+  sort_order       Int       @default(0)
+  dataset_name     String
+  selected_columns String
+  labels_formatter String
+  report_desc      String?   @db.VarChar(250)
+  dataset_type     String
+  client_uuid      String    @db.Uuid
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at       DateTime? @db.Timestamptz(6)
+  client           client    @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_35535d8ccbe3ef803ded2856f9e")
+}
+
+model responsibility {
+  responsibility_uuid      String              @id(map: "PK_d885e81f0c5cfa595d62e286690") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  responsibility_note      String?
+  responsible_party        String
+  lease_uuid               String              @db.Uuid
+  responsibility_type_uuid String              @db.Uuid
+  created_at               DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at               DateTime?           @db.Timestamptz(6)
+  responsibility_type      responsibility_type @relation(fields: [responsibility_type_uuid], references: [responsibility_type_uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_a4e1f5f82e9c2445736b4db9e89")
+  lease                    lease               @relation(fields: [lease_uuid], references: [lease_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_c62df7d1fc6bdb8d6409bbae3c4")
+}
+
+model responsibility_type {
+  responsibility_type_uuid String           @id(map: "PK_87f70d4dd2753a06abdb24c6528") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  responsibility_type_name String           @unique(map: "UQ_310f21dbe4afeaff12815bed327") @db.VarChar(50)
+  responsibility           responsibility[]
+}
+
+model user {
+  user_uuid          String         @id(map: "PK_a95e949168be7b7ece1a2382fed") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email              String         @unique @db.VarChar(100)
+  active_client_uuid String         @db.Uuid
+  user_name          String         @db.VarChar(100)
+  okta_user_id       String         @unique @db.VarChar(200)
+  is_admin           Boolean?       @default(false)
+  first_name         String?        @db.VarChar(100)
+  last_name          String?        @db.VarChar(100)
+  user_initial       String?        @db.VarChar(3)
+  is_first_sign_in   Boolean?       @default(false)
+  okta_token         String?        @unique
+  created_at         DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime       @default(now()) @db.Timestamptz(6)
+  deleted_at         DateTime?      @db.Timestamptz(6)
+  activity_log       activity_log[]
+  note               note[]
+  user_client        user_client[]
+}
+
+model user_client {
+  user_client_uuid        String   @id(map: "PK_b2b886032d462253677a17fb242") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  timezone                String   @db.VarChar(50)
+  security_role           String   @db.VarChar(100)
+  format_date             String   @db.VarChar(20)
+  format_number           String   @db.VarChar(20)
+  datum_permission        String?
+  primus_permission       String?
+  is_admin                Boolean? @default(false)
+  preferred_unit_meas     String   @default("sqf")
+  user_language           String?  @default("en_us")
+  client_uuid             String   @db.Uuid
+  user_uuid               String   @db.Uuid
+  preferred_currency_code String   @db.VarChar(3)
+  currency                currency @relation(fields: [preferred_currency_code], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_293ea9227473b457e5858e95813")
+  user                    user     @relation(fields: [user_uuid], references: [user_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_aa8ad9cb58e328de914f075afd0")
+  client                  client   @relation(fields: [client_uuid], references: [client_uuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_cf2efb49db564f1f9d5ad78ce02")
+
+  @@unique([user_uuid, client_uuid], map: "IDX_7b6998aed366a93fefb331b8d8")
+}
